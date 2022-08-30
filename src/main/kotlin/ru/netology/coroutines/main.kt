@@ -4,7 +4,6 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.*
 import okhttp3.*
-import okhttp3.logging.HttpLoggingInterceptor
 import ru.netology.coroutines.dto.*
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -23,33 +22,6 @@ private val client = OkHttpClient.Builder()
     .connectTimeout(30, TimeUnit.SECONDS)
     .build()
 
-//fun main() {
-//    with(CoroutineScope(EmptyCoroutineContext)) {
-//        launch {
-//            try {
-//                val posts = getPosts(client)
-//                val result = posts.map { post ->
-//                    async {
-//                        DetailedPosts(
-//                            post,
-//                            getAuthor(client, post.authorId),
-//
-//                            getComments(client, post.id).map {
-//                                getAuthorComment(client, it),
-//                                it
-//                            }
-//                        )
-//                    }
-//                }.awaitAll()
-//                println(result)
-//            } catch (e: Exception) {
-//                e.printStackTrace()
-//            }
-//        }
-//    }
-//    Thread.sleep(30_000L)
-//}
-
 fun main() {
     with(CoroutineScope(EmptyCoroutineContext)) {
         launch {
@@ -57,10 +29,14 @@ fun main() {
                 val posts = getPosts(client)
                 val result = posts.map { post ->
                     async {
-                        AuthorPostsWithComments(
+                        DetailedPost(
                             post,
                             getAuthor(client, post.authorId),
-                            getComments(client, post.id)
+                            getComments(client, post.id).map {
+                                async {
+                                    AuthorComment(it, getAuthor(client, it.authorId))
+                                }
+                            }.awaitAll()
                         )
                     }
                 }.awaitAll()
@@ -72,6 +48,29 @@ fun main() {
     }
     Thread.sleep(30_000L)
 }
+
+//fun main() {
+//    with(CoroutineScope(EmptyCoroutineContext)) {
+//        launch {
+//            try {
+//                val posts = getPosts(client)
+//                val result = posts.map { post ->
+//                    async {
+//                        AuthorPostsWithComments(
+//                            post,
+//                            getAuthor(client, post.authorId),
+//                            getComments(client, post.id)
+//                        )
+//                    }
+//                }.awaitAll()
+//                println(result)
+//            } catch (e: Exception) {
+//                e.printStackTrace()
+//            }
+//        }
+//    }
+//    Thread.sleep(30_000L)
+//}
 
 suspend fun OkHttpClient.apiCall(url: String): Response {
     return suspendCoroutine { continuation ->
@@ -112,6 +111,3 @@ suspend fun getComments(client: OkHttpClient, id: Long): List<Comment> =
 
 suspend fun getAuthor(client: OkHttpClient, id: Long): Author =
     makeRequest("$BASE_URL/api/authors/$id", client, object : TypeToken<Author>() {})
-
-suspend fun getAuthorComment(client: OkHttpClient, comment: Comment): AuthorComment =
-    makeRequest("$BASE_URL/api/authors/${comment.authorId}", client, object : TypeToken<AuthorComment>() {})

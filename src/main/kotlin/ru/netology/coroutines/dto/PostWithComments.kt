@@ -5,13 +5,13 @@ data class PostWithComments(
     val comments: List<Comment>,
 )
 
-data class AuthorPostsWithComments(
+data class AuthorPostWithComments(
     val post: Post,
     val author: Author,
     val comments: List<Comment>,
 )
 
-data class DetailedPosts(
+data class DetailedPost(
     val post: Post,
     val author: Author,
     val authorComments: List<AuthorComment>,
